@@ -1,0 +1,195 @@
+بسمه تعالی
+نصب و تنظیم FTP  در سیستم عامل اوبونتو
+
+نکته :  در تمامی مراحل دستورات با دسترسی Root وارد شده است
+1- ابتدا از طریق SSH به ابونتو 20 خود متصل شوید.
+2- سپس دستور زیر را وارد کرده تا یک بار مخازن ابونتو 20 آپدیت شود.
+apt update
+
+3- پس از اتمام مراحل دستور بالا ، دستور زیر را برای دانلود و نصب سرویس VSFTP وارد نمایید.
+apt install -y vsftpd
+
+
+4- بعد از اتمام نصب دستورات زیر را وارد کرده تا سرویس VSFTP استارت شده و در استارت‌آپ ابونتو شما قرار گیرد.
+Systemctl start  vsftpd 
+systemctl enable vsftpd
+
+پیکربندی FTP
+
+1-	در ابتدا یک یوزر را ایجاد کرده و پسوردی برای آن تنظیم کنید.
+useradd –m kargar
+passwd     kargar
+نکته : پس از وارد کردن دستور دوم ، بایستی دو بار پسورد برای این یوزر نیز وارد شود.
+
+2-حال فایل پیش‌فرض VSFTP را تغییر نام داده تا در صورت بروز خطا بتوان آن را بازگرداند.
+mv /etc/vsftpd.conf  /etc/vsftpd.conf.orig
+
+
+
+2-	یک فایل جدید پیکربندی برای VSFTP ایجاد و با یک ویرایشگر باز کنید.
+(در دستور زیر ما از ویرایشگر نانو استفاده کرده‌ایم ، اما شما می‌توانید از ویرایشگر Vi و یا ... نیز استفاده کنید).
+
+nano /etc/vsftpd.conf
+
+
+
+
+
+
+
+
+
+
+
+
+4-حال عبارت زیر را در فایل باز شده کپی کرده و در پایان فایل را ذخیره و خارج شوید.
+listen=NO
+listen_ipv6=YES
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+dirmessage_enable=YES
+use_localtime=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+chroot_local_user=YES
+secure_chroot_dir=/var/run/vsftpd/empty
+pam_service_name=vsftpd
+rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+ssl_enable=NO
+pasv_enable=Yes
+pasv_min_port=10000
+pasv_max_port=10100
+allow_writeable_chroot=YES
+
+5- پس از اتمام ویرایش فایل ، دستور زیر را وارد کرده تا یک بار سرویس VSFTP ریستارت شود.
+systemctl restart vsftpd
+
+
+
+
+
+-6 با این تنظیمات فعلی شما دسترسی به شاخه روت یوزری که با آن به FTP لاگین می‌نمایید ، خواهید داشت.
+به طور مثال آدرس این دایرکتوری برای یوزر kargar عبارت‌از : home/kargar/
+بدین ترتیب شما موفق به تنظیم FTP بر روی ابونتو خود شده‌اید
+حال در پایان تنها نیاز است پورت‌های مورد نیاز این سرویس را بر روی فایروال خود تنظیم نمایید.
+تنظیم فایروال ابونتو 18 برای استفاده از سرویس FTP
+برای دریافت سرویس FTP دستورات زیر را وارد کرده تا تمامی پورت‌های مورد نیاز باز شود.
+نکته : کاربر گرامی دستورات زیر طبق استاندارد ابونتو 20 برای تنظیم UFW ذکر شده و چنانچه از فایروال دیگری استفاده می‌نمایید باید طبق استاندارد همان فایروال ، پورت‌های مورد نیاز که در دستورات زیر مشخص است را باز کنید.
+ufw allow 20/tcp
+ufw allow 21/tcp
+ufw allow 990/tcp
+ufw allow 10000:10100/tcp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+به دلیل وجود چندین تیم و بخش بندی ها متفاوت گروه های متفاوتی در مسیر   /home/share/     برای هر بخش دایرکتوری مجزایی ساخت شده است . 
+mkdir IT
+mkdir  MGMT
+mkdir  Official
+mkdir  security
+mkdir  RD
+mkdir  General
+
+تیم های متفاوت و با gid  های مشخص برای راحتی کار ساخته شده است (gid  عددی که میدهید نباید باهم  یکسان باشد و کاملا اختیاری هستش وگرنه سیستم به صورت اوتوماتیک یک عدد به آن اختصاص می دهد ).
+groupadd General  -g 2000
+groupadd IT       -g 2200
+groupadd MGMT     -g 2300
+groupadd Offical  -g 2400
+groupadd security -g 2500
+groupadd RD       -g 2600
+
+اختصاص دایرکتوری به گروه ها
+Chgrp   IT                 /home/share/IT
+chgrp   MGMT        /home/share/MGMT
+chgrp   Offical         /home/share/Offical
+chgrp   security      /home/share/security
+chgrp   RD               /home/share/RD
+
+پرمیشن هم برای فایل ها گذاشته شده است که برای هر یوزر و گروه متفاوت بوده است .
+drwxrwxrwx        General
+dr-xrwx---             IT
+dr-xrwx---            MGMT
+dr-xrwx---            official
+dr-xrwx---            'R&D'
+dr-xrwx---            security
+
+حال حساب کاربری هایی که برای همکاران بیت بانی ساخته شد به این صورت است .
+نکته : سوییچ  -aG  اختصاص گروه  و --home   دایرکتوری که برای یوزر باز میشود را مشخص میکند .
+
+useradd karegar_a
+passwd  karegar_a
+usermod karegar_a  -aG 2200,2000 --home /home/share
+
+useradd lajevardi
+passwd  lajevardi
+usermod lajevardi  -aG 2000,2200,2300,2400,2500,2600 --home /home/share
+
+useradd rahimi_k
+passwd  rahimi_k
+usermod rahimi_k  -aG 2500,2000 --home /home/share
+
+useradd fakhari_s
+passwd  fakhari_s
+usermod fakhari_s  -aG 2200,2300,2000 --home /home/share
+
+useradd esmaeelinejad
+passwd  esmaeelinejad
+usermod esmaeelinejad  -aG 2600,2000,2300 --home /home/share
+
+useradd toghiei_s
+passwd  toghiei_s
+usermod toghiei_s  -aG 2400,2000 --home /home/share
+
+useradd alizadeh_f
+passwd  alizadeh_f
+usermod alizadeh_f  -aG 2500,2000 --home /home/share
+
+useradd ghofrani_f
+passwd  ghofrani_f
+usermod ghofrani_f  -aG 2500,2000,2300 --home /home/share
+
+useradd hoseini_m
+passwd  hoseini_m
+usermod hoseini_m  -aG 2600,2000 --home /home/share
+
+useradd kheradhoosh_m
+passwd  kheradhoosh_m
+usermod kheradhoosh_m  -aG 2600,2000 --home /home/share
+
+useradd sadr_a
+passwd  sadr_a
+usermod sadr_a  -aG 2400,2000 --home /home/share
+
+useradd mohebbi_n
+passwd  mohebbi_n
+usermod mohebbi_n  -aG 2400,2000 --home /home/share
+
+useradd Karami_h
+passwd  Karami_h
+usermod Karami_h -aG 2600,2000 --home /home/share
+
+
+
+
+
+
+
+
+
